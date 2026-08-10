@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import signal
 import subprocess
 import sys
 import tempfile
@@ -10,19 +12,11 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 from simulator import FAMILIES, make_scenario  # noqa: E402
 
-SELECTION_SEEDS = {
-    "linear_outliers": (41821, 90733),
-    "nonlinear": (52919, 101771),
-    "temporal_spurious": (63029, 112909),
-    "heterogeneous": (74143, 126227),
-    "composite": (85361, 139901),
-}
-
-FINAL_SEEDS = {
+SCENARIO_SEEDS = {
     "linear_outliers": (156007, 230123),
     "nonlinear": (171161, 241117),
     "temporal_spurious": (186733, 252131),
@@ -30,7 +24,53 @@ FINAL_SEEDS = {
     "composite": (214087, 274177),
 }
 
-BANKS = {"selection": SELECTION_SEEDS, "final": FINAL_SEEDS}
+
+def _candidate_command(candidate: Path, paths: tuple[Path, Path, Path, Path]) -> list[str]:
+    if candidate.suffix == ".py":
+        return [sys.executable, str(candidate), *map(str, paths)]
+    return [str(candidate), *map(str, paths)]
+
+
+def _candidate_environment(home: Path) -> dict[str, str]:
+    return {
+        "HOME": str(home),
+        "LANG": "C.UTF-8",
+        "LC_ALL": "C.UTF-8",
+        "PATH": "/usr/local/bin:/usr/bin:/bin",
+        "PYTHONDONTWRITEBYTECODE": "1",
+        "OMP_NUM_THREADS": "2",
+        "OPENBLAS_NUM_THREADS": "2",
+        "MKL_NUM_THREADS": "2",
+        "NUMEXPR_NUM_THREADS": "2",
+    }
+
+
+def _execute_candidate(
+    candidate: Path,
+    paths: tuple[Path, Path, Path, Path],
+    work: Path,
+    timeout: int,
+) -> tuple[int, str]:
+    stdout = work / "candidate.stdout"
+    stderr = work / "candidate.stderr"
+    with stdout.open("wb") as out, stderr.open("wb") as err:
+        process = subprocess.Popen(
+            _candidate_command(candidate, paths),
+            cwd=work,
+            env=_candidate_environment(work),
+            stdin=subprocess.DEVNULL,
+            stdout=out,
+            stderr=err,
+            start_new_session=True,
+        )
+        try:
+            returncode = process.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            os.killpg(process.pid, signal.SIGKILL)
+            process.wait()
+            raise
+    tail = (stderr.read_bytes() or stdout.read_bytes())[-300:].decode("utf-8", "replace").strip()
+    return returncode, tail
 
 
 def _log_loss(y: np.ndarray, p: np.ndarray) -> float:
@@ -58,7 +98,7 @@ def _read_predictions(path: Path, expected_ids: pd.Series) -> np.ndarray:
 
 def _run_case(candidate: Path, family: str, seed: int, replica: int, timeout: int) -> dict:
     train, validation, test, labels = make_scenario(family, seed)
-    with tempfile.TemporaryDirectory(prefix="mle-env-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="probability-model-") as temporary:
         work = Path(temporary)
         train_path = work / "train.csv"
         validation_path = work / "validation.csv"
@@ -69,24 +109,14 @@ def _run_case(candidate: Path, family: str, seed: int, replica: int, timeout: in
         test.to_csv(test_path, index=False)
         valid, error = True, None
         try:
-            run = subprocess.run(
-                [
-                    sys.executable,
-                    str(candidate),
-                    str(train_path),
-                    str(validation_path),
-                    str(test_path),
-                    str(output_path),
-                ],
-                cwd=work,
-                text=True,
-                capture_output=True,
-                timeout=timeout,
-                check=False,
+            returncode, tail = _execute_candidate(
+                candidate,
+                (train_path, validation_path, test_path, output_path),
+                work,
+                timeout,
             )
-            if run.returncode != 0:
-                tail = (run.stderr or run.stdout)[-300:].strip()
-                raise ValueError(f"candidate exited {run.returncode}: {tail}")
+            if returncode != 0:
+                raise ValueError(f"candidate exited {returncode}: {tail}")
             probability = _read_predictions(output_path, test["row_id"])
         except (OSError, ValueError, subprocess.TimeoutExpired) as exc:
             valid, error = False, str(exc)
@@ -110,12 +140,11 @@ def _run_case(candidate: Path, family: str, seed: int, replica: int, timeout: in
 def main() -> None:
     parser = argparse.ArgumentParser(description="Score a candidate on 10 private shift scenarios.")
     parser.add_argument("candidate", type=Path)
-    parser.add_argument("--bank", choices=tuple(BANKS), default="final")
     parser.add_argument("--timeout", type=int, default=45, help="seconds allowed per scenario")
     parser.add_argument("--anchors", type=Path, default=ROOT / "anchors.json")
     args = parser.parse_args()
     candidate = args.candidate.resolve()
-    seeds = BANKS[args.bank]
+    seeds = SCENARIO_SEEDS
 
     scenarios = [
         _run_case(candidate, family, seed, replica, args.timeout)
@@ -132,7 +161,7 @@ def main() -> None:
     }
     raw_f = float(np.mean([case["skill"] for case in scenarios]))
     result = {
-        "bank": args.bank,
+        "bank": "final",
         "raw_F": raw_f,
         "valid_scenarios": sum(case["valid"] for case in scenarios),
         "total_scenarios": len(scenarios),

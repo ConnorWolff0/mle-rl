@@ -1,0 +1,6 @@
+{
+  "version": "harbor-v1",
+  "F_golden": 0.20478197273050816,
+  "golden_source_sha256": "7a7fb72a9172d0bc8dfdee492c976b6608207a9aa7059bd2b6e7b309270ba269",
+  "reward_formula": "clip(final_raw_F / F_golden, 0, 1)"
+}

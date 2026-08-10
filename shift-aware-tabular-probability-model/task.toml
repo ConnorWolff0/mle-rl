@@ -1,0 +1,36 @@
+schema_version = "1.4"
+
+[task]
+name = "ml/shift-aware-tabular-probability-model"
+version = "1.0.0"
+description = "Improve a deterministic tabular probability model so it remains well calibrated across future cohorts with distribution shift."
+keywords = ["machine-learning-engineering", "tabular-ml", "distribution-shift", "calibration", "python"]
+
+[metadata]
+category = "machine-learning-engineering"
+difficulty = "medium"
+difficulty_explanation = "The implementation must use chronological evidence to balance linear and nonlinear structure, changing segment mixtures, corrupted measurements, temporal instability, and probability calibration without knowing the future regime."
+expert_time_estimate_min = 120
+junior_time_estimate_min = 360
+author_build_commands = ["./build.sh", "./test.sh"]
+author_run_commands = ["./run.sh public/data/train.csv public/data/validation.csv public/data/test.csv /tmp/predictions.csv"]
+
+[agent]
+timeout_sec = 7200.0
+user = 10001
+network_mode = "allowlist"
+allowed_hosts = ["api.x.ai"]
+
+[verifier]
+timeout_sec = 1200.0
+user = 10001
+network_mode = "allowlist"
+allowed_hosts = ["api.x.ai"]
+
+[environment]
+build_timeout_sec = 900.0
+network_mode = "allowlist"
+allowed_hosts = ["api.x.ai", "x.ai", "storage.googleapis.com", "deb.debian.org", "security.debian.org"]
+cpus = 2
+memory_mb = 4096
+storage_mb = 8192
