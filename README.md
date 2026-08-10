@@ -1,6 +1,6 @@
 # Compact shift-aware MLE environment
 
-This repository is the runnable prototype. A coding agent receives a starter
+A coding agent receives a starter
 binary-classification program and improves its future probability predictions
 under distribution shift. Prediction quality is the only scored objective;
 the time limit is only a feasibility check.
@@ -88,11 +88,3 @@ mle-env/
 └── private/
     └── grade.py
 ```
-
-Presentation slides, frozen rollout evidence, presenter-only test labels, the
-promoted golden source, and detailed run narratives live separately in
-`../mle-env-docs/`. They are not needed to execute this repository.
-
-This is a concise modeling and reward-differentiation prototype, not a
-production-hardened agent sandbox. A real rollout runner must copy only its
-explicit allowlist into an isolated agent workspace.
