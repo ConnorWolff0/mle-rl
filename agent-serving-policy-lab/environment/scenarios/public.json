@@ -1,0 +1,135 @@
+{
+  "config": {
+    "kv_bytes_per_token": 2048,
+    "slo_us": 600000,
+    "hbm_to_host_bytes_per_second": 300000000,
+    "host_to_hbm_bytes_per_second": 350000000,
+    "peer_bytes_per_second": 700000000,
+    "transfer_fixed_us": 30,
+    "adapter_peer_bytes_per_second": 1000000000,
+    "adapter_transfer_fixed_us": 50
+  },
+  "adapters": [
+    {
+      "key": "adapter-blue",
+      "size_bytes": 4194304
+    },
+    {
+      "key": "adapter-gold",
+      "size_bytes": 4194304
+    }
+  ],
+  "instances": [
+    {
+      "id": "worker-a",
+      "hbm_capacity_bytes": 6291456,
+      "host_capacity_bytes": 6291456,
+      "prefill_tokens_per_second": 20000,
+      "decode_tokens_per_second": 2000,
+      "adapter_capacity_bytes": 6291456,
+      "adapter_load_bytes_per_second": 200000000
+    },
+    {
+      "id": "worker-b",
+      "hbm_capacity_bytes": 6291456,
+      "host_capacity_bytes": 6291456,
+      "prefill_tokens_per_second": 16000,
+      "decode_tokens_per_second": 2500,
+      "adapter_capacity_bytes": 6291456,
+      "adapter_load_bytes_per_second": 200000000
+    }
+  ],
+  "programs": [
+    {
+      "id": "assistant-blue-long",
+      "arrival_us": 0,
+      "slo_us": 350000,
+      "adapter_key": "adapter-blue",
+      "turns": [
+        {
+          "new_input_tokens": 240,
+          "output_tokens": 32,
+          "output_token_hint": 36,
+          "tool_gap_us": 300000,
+          "tool_class": "search",
+          "tool_gap_hint_us": 260000
+        },
+        {
+          "new_input_tokens": 80,
+          "output_tokens": 24,
+          "output_token_hint": 20,
+          "tool_gap_us": 0,
+          "tool_class": "finalize"
+        }
+      ]
+    },
+    {
+      "id": "assistant-blue-short",
+      "arrival_us": 0,
+      "slo_us": 120000,
+      "adapter_key": "adapter-blue",
+      "turns": [
+        {
+          "new_input_tokens": 180,
+          "output_tokens": 24,
+          "output_token_hint": 28,
+          "tool_gap_us": 0,
+          "tool_class": "finalize"
+        }
+      ]
+    },
+    {
+      "id": "assistant-gold-brief",
+      "arrival_us": 100000,
+      "slo_us": 90000,
+      "adapter_key": "adapter-gold",
+      "turns": [
+        {
+          "new_input_tokens": 140,
+          "output_tokens": 20,
+          "output_token_hint": 22,
+          "tool_gap_us": 0,
+          "tool_class": "finalize"
+        }
+      ]
+    },
+    {
+      "id": "assistant-gold-dialog",
+      "arrival_us": 150000,
+      "slo_us": 170000,
+      "adapter_key": "adapter-gold",
+      "turns": [
+        {
+          "new_input_tokens": 160,
+          "output_tokens": 26,
+          "output_token_hint": 24,
+          "tool_gap_us": 50000,
+          "tool_class": "function",
+          "tool_gap_hint_us": 60000
+        },
+        {
+          "new_input_tokens": 70,
+          "output_tokens": 18,
+          "output_token_hint": 20,
+          "tool_gap_us": 0,
+          "tool_class": "finalize"
+        }
+      ]
+    },
+    {
+      "id": "assistant-blue-late",
+      "arrival_us": 155000,
+      "slo_us": 100000,
+      "adapter_key": "adapter-blue",
+      "turns": [
+        {
+          "new_input_tokens": 120,
+          "output_tokens": 18,
+          "output_token_hint": 20,
+          "tool_gap_us": 0,
+          "tool_class": "finalize"
+        }
+      ]
+    }
+  ]
+}

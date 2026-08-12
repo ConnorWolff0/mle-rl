@@ -1,3 +1,15 @@
+# MLE RL Environments
+
+Small, objectively scored environments for machine-learning-engineering agents.
+
+- [`shift-aware-tabular-probability-model/`](shift-aware-tabular-probability-model/)
+  tests model selection, calibration, and robustness under tabular cohort shift.
+- [`agent-serving-policy-lab/`](agent-serving-policy-lab/)
+  tests online routing, scheduling, KV locality, and model-adapter residency in
+  a deterministic CPU-only serving simulator.
+
+## Shift-aware tabular benchmark results
+
 All ten runs received the same starting files, prompt, model configuration, and
 one-turn budget.
 
