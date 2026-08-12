@@ -1,45 +1,27 @@
-# Agent Serving Policy Lab
+# Agent Serving Policy Lab — Results
 
-A deterministic, CPU-only environment for designing an online serving policy
-for multi-turn LLM agents.
+| Run | Programs within SLO | Score |
+|---:|---:|---:|
+| 1 | 514 / 1,024 | 0.501953125 |
+| 2 | 557 / 1,024 | 0.5439453125 |
+| 3 | 475 / 1,024 | 0.4638671875 |
+| 4 | 527 / 1,024 | 0.5146484375 |
+| 5 | 610 / 1,024 | 0.595703125 |
+| 6 | 394 / 1,024 | 0.384765625 |
 
-The policy must coordinate four decisions:
+| Statistic | Result |
+|---|---:|
+| Valid runs | 6 / 6 |
+| Mean | 0.5008138021 |
+| Median | 0.5083007813 |
+| IQR | 0.0800781250 |
+| Range | 0.2109375000 |
+| Distinct policy families | 4 |
+| Differentiation gates | 5 / 5 passed |
+| Selection gates | 30 / 30 passed |
+| Holdout gates | 27 / 27 passed |
 
-1. route each ready model turn to a worker;
-2. schedule the ready turns assigned to that worker;
-3. keep or discard a reusable model adapter after a request; and
-4. choose adapter replicas to evict when memory is full.
-
-The simulator models heterogeneous workers, queues, end-to-end SLOs, multi-turn
-KV reuse, tool-call gaps, adapter loads and peer copies, and finite HBM, host,
-and adapter memory. It uses logical time, the Python 3.12 standard library, and
-no GPU or network access.
-
-## Quick start
-
-```sh
-cd environment
-./build.sh
-./test.sh
-./run.sh scenarios/public.json /tmp/serving-report.json
-python3 -m json.tool /tmp/serving-report.json
-```
-
-Edit [`environment/policy.py`](environment/policy.py). The callback and state
-schemas are specified in [`environment/CONTRACT.md`](environment/CONTRACT.md),
-and [`instruction.md`](instruction.md) contains the task prompt.
-
-The included five-program scenario is a development fixture that exercises the
-complete policy lifecycle. Its score is not a benchmark result.
-
-## Evaluation assets
-
-This public folder intentionally omits the private 1,024-program evaluation
-bank, trusted grader, workload generator, rollout evidence, and tuned reference
-policy. Keeping those assets private preserves the usefulness of the benchmark;
-the public simulator, starter policy, fixture, and contract tests are sufficient
-for development and integration.
-
-This is a compact trace-driven simulator, not a hardware-fidelity model of a
-specific GPU serving stack. It is intended to isolate the policy decisions and
-make them fast, deterministic, and objectively scoreable on a CPU.
+| Sanity endpoint | Programs within SLO | Score |
+|---|---:|---:|
+| Starter | 206 / 1,024 | 0.201171875 |
+| Reference | 310 / 1,024 | 0.302734375 |
