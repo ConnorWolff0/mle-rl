@@ -1,23 +1,16 @@
-# Build an agent-serving policy
+Please improve `/app/policy.py` so more complete multi-turn programs finish within their end-to-end SLOs.
 
-A client runs multi-turn LLM agents on a small inference cluster. Each program can pause for a tool call and later return with a reusable KV prefix. Programs can also require reusable model adapters. A worker may already hold the right prefix or adapter, may copy one from another worker, may load an adapter from storage, or may have to recompute an evicted prefix. These operations compete with queues, limited memory, different worker speeds, bursts, and end-to-end deadlines.
+Programs may pause for tool calls and return with reusable KV prefixes. Some also need model adapters. Workers have different speeds and memory limits, so a turn may reuse local state, copy it from another worker, restore it from host memory, or recompute it after eviction.
 
-Improve `/app/policy.py` so as many complete programs as possible finish within their SLO. Your policy makes four decisions:
+The policy has four callbacks. `route` chooses a worker, `schedule` orders that worker's queue, `adapter_disposition` decides whether a used adapter stays resident, and `evict_adapter` ranks adapter replicas to remove when space is needed. The simulator handles KV placement with fixed LRU rules, but routing and scheduling still determine how much state can be reused.
 
-1. choose a worker for each ready model turn with `route`;
-2. order that worker's ready queue with `schedule`;
-3. keep or discard an adapter replica after use with `adapter_disposition`; and
-4. rank adapter replicas for removal when a worker needs space with `evict_adapter`.
+Service quality is the share of complete programs that meet their SLO. It is measured across 1,024 equally weighted programs. The five-program public scenario is only a development fixture and is not part of that result.
 
-The simulator owns KV placement. It keeps unfinished KV prefixes in HBM, removes finished prefixes, and uses deterministic LRU pressure handling. Your routing decisions still determine whether a later turn gets a local HBM hit, restores from host, copies a remote prefix, or recomputes it.
+Keep the callback interface in `CONTRACT.md` and the `./run.sh SCENARIO_JSON OUTPUT_JSON` command working. Decisions must be deterministic and may use only the supplied callback observations and state saved from earlier callbacks. You may replace the starter policy, add helper modules, and add tests using Python 3.12's standard library.
 
-The service objective is the raw pooled fraction of whole programs that meet their end-to-end SLO. Deployment traffic has 1,024 equally weighted programs: 64 programs in each of 16 configurations. The four client-demand families are `stationary`, `rotating`, `abrupt`, and `mixed`; each is crossed with `balanced`, `adapter_pressure`, `crossed`, and `burst_recovery` deployment profiles. Every additional on-time program raises service quality by exactly `1/1024`. There is no normalization, clipping, reference-policy comparison, or auxiliary-metric bonus.
+Leave files under `serving_sim/` and `scenarios/` unchanged. Do not special-case the public fixture's IDs, ordering, event sequence, or values.
 
-Preserve the exact callback contract in `CONTRACT.md` and the headless `./run.sh SCENARIO_JSON OUTPUT_JSON` interface. Decisions must be deterministic and may use only the observations supplied to the callbacks plus the policy's own observation history. The policy architecture is open: you may replace the starter, split your implementation into support modules, and add focused tests using Python 3.12's standard library.
-
-Files under `serving_sim/` and `scenarios/` are byte-immutable. Do not derive behavior from the public fixture's IDs, array order, event order, or constants. The fixture is a five-program development example that deliberately exercises adapter cold loads, reuse, a peer copy, capacity eviction, multi-turn KV reuse, and all four callbacks; its score is not part of deployment service quality.
-
-Start with:
+You can run the development loop with:
 
 ```sh
 cd /app
@@ -27,4 +20,4 @@ cd /app
 python3 -m json.tool /tmp/serving-report.json
 ```
 
-The simulator is deterministic, CPU-only, self-contained, and independent of host wall-clock speed. See `CONTRACT.md` for the complete schemas, timing rules, limits, and report arithmetic.
+`CONTRACT.md` contains the exact callback schemas, timing rules, limits, and report format.
